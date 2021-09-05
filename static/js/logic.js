@@ -1,6 +1,6 @@
 
 // Store our API endpoint as queryUrl. 
-var queryUrl = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson";
+var queryUrl = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson";
 
 // Create the base layers.
 var street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -19,42 +19,56 @@ var myMap = L.map("map", {
     layers: [street, topo]
 });
 
-
-
 // Create a baseMaps object.
 var baseMaps = {
     "Street Map": street,
     "Topographic Map": topo
 };
 
+
 function onEachFeature(feature, layer) {
-    layer.bindPopup(`<h3>${feature.properties.place}</h3><hr><p>${new Date(feature.properties.time)}</p>`);
+    layer.bindPopup(
+        `<h3>${feature.properties.title}</h3><hr>
+        <p><strong>Date of Occurrence:</strong>${new Date(feature.properties.time)}</p>
+        <p><strong>Depth in km:</strong>${(feature.geometry.coordinates[2])}</p>`);
 };
 
-
 d3.json(queryUrl).then(function (data) {
-    var feature = data.features
     // Creating a GeoJSON layer with the retrieved data
-    // console.log(feature.feature);
-    var geolayer = L.geoJson(data, {
-    // console.log(data.features) });
+    // TODO This may need to be a logarithmic scale
+    const MaxDepth = Math.max(...data.features.map(x => x.geometry.coordinates[2]));
+    const MaxRadius = Math.max(...data.features.map(x => x.properties.mag))
 
-                onEachFeature: onEachFeature,
-        // Styling each feature
-        style: function (feature) {
-            return {
-                color: "white",
-                fillColor: "blue",
-                fillOpacity: feature.geometry.coordinates[2],
-                radius: feature.properties.mag
+    function getColor(d) {
+        return d > 0.75? '#009C9C' :
+               d > 0.5  ? '#00BFC3' :
+               d > 0.25  ? '#278CFA' :
+               d > 0.1 ? '#68FFFF' :
+                          '#ADFFCF';
+    };
+
+    var geolayer = L.geoJSON(data, {
+        onEachFeature: onEachFeature,
+        pointToLayer: function (feature, latlng) {
+            var geojsonMarkerOptions = {
+                color: "black",
+                weight: 1,
+                fillColor: getColor(Math.log(feature.geometry.coordinates[2])/Math.log(100)),
+                fillOpacity: 1,
+                radius: Math.log(feature.properties.mag)*10
             };
-        },
+            return L.circleMarker(latlng, geojsonMarkerOptions);
+        }
     });
+
     geolayer.addTo(myMap);
+
+
     var overlayMaps = {Locations: geolayer};
     L.control.layers(baseMaps, overlayMaps, {
         collapsed: false
     }).addTo(myMap);
+
 });
 
 
