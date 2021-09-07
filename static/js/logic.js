@@ -40,11 +40,12 @@ d3.json(queryUrl).then(function (data) {
     const MaxRadius = Math.max(...data.features.map(x => x.properties.mag))
 
     function getColor(d) {
-        return d > 0.75? '#009C9C' :
-               d > 0.5  ? '#00BFC3' :
-               d > 0.25  ? '#278CFA' :
-               d > 0.1 ? '#68FFFF' :
-                          '#ADFFCF';
+        return d > 89? '#0000d1' :
+               d > 69  ? '#8f2ca7' :
+               d > 49  ? '#b75e88' :
+               d > 29 ? '#c79171' :
+               d > 9 ? '#bec762' :
+                          '#89ff62';
     };
 
     var geolayer = L.geoJSON(data, {
@@ -53,7 +54,7 @@ d3.json(queryUrl).then(function (data) {
             var geojsonMarkerOptions = {
                 color: "black",
                 weight: 1,
-                fillColor: getColor(Math.log(feature.geometry.coordinates[2])/Math.log(100)),
+                fillColor: getColor(feature.geometry.coordinates[2]),
                 fillOpacity: 1,
                 radius: Math.log(feature.properties.mag)*10
             };
@@ -64,8 +65,27 @@ d3.json(queryUrl).then(function (data) {
     geolayer.addTo(myMap);
 
 
+var legend = L.control({position: 'bottomright'});
+legend.onAdd = function (myMap) {
+    var div = L.DomUtil.create('div', 'info legend');
+    labels = ['<strong>Earthquake Depth Indicator<br>(in km)</strong></br>'],
+    categories = ['-10','10','30','50','70','90'];    
+        for (var i = 0; i < categories.length; i++) {
+        
+                div.innerHTML += 
+                labels.push(
+                    '<i style="background:' + getColor(categories[i]) + '"></i> ' +
+                    categories[i] + (categories[i + 1] ? '&ndash;' + categories[i + 1] : '+'));
+        
+            }
+            div.innerHTML = labels.join('<br>');
+        return div;
+        };
+    legend.addTo(myMap);
+
+
     var overlayMaps = {Locations: geolayer};
-    L.control.layers(baseMaps, overlayMaps, {
+    L.control.layers(baseMaps, overlayMaps, legend, {
         collapsed: false
     }).addTo(myMap);
 
